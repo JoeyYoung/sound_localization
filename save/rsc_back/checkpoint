@@ -1,0 +1,5 @@
+model_checkpoint_path: "save80.ckpt"
+all_model_checkpoint_paths: "save20.ckpt"
+all_model_checkpoint_paths: "save40.ckpt"
+all_model_checkpoint_paths: "save60.ckpt"
+all_model_checkpoint_paths: "save80.ckpt"
