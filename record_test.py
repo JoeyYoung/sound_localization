@@ -10,6 +10,7 @@ import wave
 from scipy.io import wavfile
 import sys
 import numpy as np
+import time
 
 CHUNK = 1024
 RECORD_DEVICE_NAME = "USB Camera-B4.09.24.1"
@@ -17,7 +18,6 @@ RECORD_WIDTH = 2
 CHANNELS = 4
 RATE = 16000
 RECORD_SECONDS = 5
-
 
 """
     python record_test.py file
@@ -76,6 +76,23 @@ if __name__ == '__main__':
     stream.stop_stream()
     stream.close()
     p.terminate()
+
+    time.sleep(5)
+
+    stream2 = p.open(format=p.get_format_from_width(RECORD_WIDTH),
+                     channels=CHANNELS,
+                     rate=RATE,
+                     input=True,
+                     input_device_index=device_index)
+    print("start....")
+
+    frames = []
+
+    for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+        data = stream2.read(CHUNK)
+        frames.append(data)
+
+    print("done...")
 
     wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
     wf.setnchannels(CHANNELS)

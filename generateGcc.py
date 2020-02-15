@@ -147,6 +147,7 @@ def generate_gcc_real(input_dir, output_dir, output_file):
 
 
 # rsc back simulated env
+# data[1] represents right
 def generate_gcc_simu_rscback(input_dir, output_dir, output_file):
     res = collections.defaultdict(list)
     gcc_width_half = 30
@@ -197,15 +198,16 @@ def generate_gcc_simu_rscback(input_dir, output_dir, output_file):
                 # data[0] represents right, data[1] represents left
 
                 if i == 1:
-                    data_pro = [(data[0][j] + data[1][j]) / 2 for j in range(len(data[0]))]
+                    data_pro = data[1]
                 elif i == 2:
                     # data_pro = data[0]
-                    data_pro = [(data[0][j] + data[1][j]) / 2 for j in range(len(data[0]))]
+                    data_pro = data[1]
                 elif i == 3:
-                    data_pro = [(data[0][j] + data[1][j]) / 2 for j in range(len(data[0]))]
+                    data_pro = data[1]
                 elif i == 4:
                     # data_pro = data[1]
-                    data_pro = [(data[0][j] + data[1][j]) / 2 for j in range(len(data[0]))]
+                    data_pro = data[1]
+                    # [(data[0][j] + data[1][j]) / 2 for j in range(len(data[0]))]
                 else:
                     data_pro = [0]
                     exit()
