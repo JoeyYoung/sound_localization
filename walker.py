@@ -111,6 +111,7 @@ class Actor:
         feed_dict = {self.s: s, self.a: a, self.td_error: td}
         _, exp_v = self.sess.run([self.train_op, self.exp_v], feed_dict=feed_dict)
 
+
 """
     Critic takes states (none, n_features) as input
     output td_error (float value)
