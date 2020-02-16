@@ -19,6 +19,12 @@ warnings.filterwarnings('ignore')
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 gpu_options = tf.GPUOptions(allow_growth=True)
 
+pwd = os.path.abspath(os.path.abspath(__file__))
+father_path = os.path.abspath(os.path.dirname(pwd) + os.path.sep + "..")
+sys.path.append(father_path)
+
+import DigitalDriver.ControlDriver as CD
+
 """
     Record Parameters
 """
@@ -33,21 +39,12 @@ TURN_SECONDS = 3
 FORWARD_SECONDS = 3
 FORMAT = pyaudio.paInt16
 
-MODEL_PATH = "save/multiple/hole/save100.ckpt"
-WAV_PATH = "online_wav/"
+MODEL_PATH = "../resource/model/save100.ckpt"
+WAV_PATH = "../resource/wav/"
 
 """
     Digital Driver Part
 """
-
-
-class Control:
-    def __init__(self):
-        self.omega = 0.1
-        self.radius = 0
-
-        # to be determined by distance/time
-        self.speed = 0
 
 
 """
@@ -258,9 +255,9 @@ class Critic:
 
 def read_wav(file):
     wav = wave.open(file, 'rb')
-    fn = wav.getnframes()  # 获取帧数 207270
-    fr = wav.getframerate()  # 获取帧速率 44100
-    fw = wav.getsampwidth()  # 获取帧速率 44100
+    fn = wav.getnframes()  # 207270
+    fr = wav.getframerate()  # 44100
+    fw = wav.getsampwidth()  # 44100
     f_data = wav.readframes(fn)
     data = np.frombuffer(f_data, dtype=np.short)
     return data
@@ -452,12 +449,12 @@ def loop_record(control):
 
 
 if __name__ == '__main__':
-    cd = Control()
-    loop_record(cd)
+    # cd = Control()
+    # loop_record(cd)
 
-    # cd = CD.ControlDriver()
-    # p1 = threading.Thread(target=loop_record, args=(cd,))
-    # p2 = threading.Thread(target=cd.control_part, args=())
-    # print("hehe")
-    # p2.start()
-    # p1.start()
+    cd = CD.ControlDriver()
+    p1 = threading.Thread(target=loop_record, args=(cd,))
+    p2 = threading.Thread(target=cd.control_part, args=())
+    print("hehe")
+    p2.start()
+    p1.start()
