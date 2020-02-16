@@ -361,6 +361,11 @@ def loop_record(control):
     # todo, fine-tuned pre-train model
     actor.load_trained_model(MODEL_PATH)
 
+    # init at the first step
+    state_last = None
+    action_last = None
+    direction_last = None
+
     # steps
     while True:
         """
@@ -416,17 +421,29 @@ def loop_record(control):
         gcc = gccGenerator.cal_gcc_online(WAV_PATH, saved_count)
         state = np.array(gcc)[np.newaxis, :]
 
-        # todo, new state for last time, reward, learn
-        state_last = state
-
         # todo, define invalids, based on constructed map
         action, _ = actor.output_action(state, [])
+
         direction = (action + 6) % 7 * 45
 
         # bias is 45 degree, ok
         print("Estimated direction is :" + str(direction))
 
-        # todo, reward
+        if saved_count > 0:
+            max_angle = max(float(direction), float(direction_last))
+            min_angle = min(float(direction), float(direction_last))
+
+            diff = min(abs(max_angle - min_angle), 360 - max_angle + min_angle)
+
+            reward = 1 - diff / 180
+
+            # learn
+            td = critic.learn(state_last, reward, state)
+            actor.learn(state_last, action_last, td)
+
+        state_last = state
+        action_last = action
+        direction_last = direction
 
         print("apply movement ...")
 
