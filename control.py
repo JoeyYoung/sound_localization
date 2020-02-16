@@ -29,9 +29,11 @@ RECORD_WIDTH = 2
 CHANNELS = 4
 RATE = 16000
 RECORD_SECONDS = 3
+FORMAT = pyaudio.paInt16
+
 TURN_SECONDS = 3
 FORWARD_SECONDS = 3
-FORMAT = pyaudio.paInt16
+STEP_SIZE = 1
 
 MODEL_PATH = "save/multiple/hole/save100.ckpt"
 WAV_PATH = "online_wav/"
@@ -48,6 +50,22 @@ class Control:
 
         # to be determined by distance/time
         self.speed = 0
+
+
+"""
+    2D map, define obstacles, restrict regions, locate walker position.
+"""
+
+
+# todo, corresponding 2D map
+
+class Map:
+    def __int__(self):
+        self.walker_pos_x = 0
+        self.walker_pos_z = 0
+
+    def update_walker_pos(self, direction):
+        pass
 
 
 """
@@ -436,6 +454,7 @@ def loop_record(control):
             diff = min(abs(max_angle - min_angle), 360 - max_angle + min_angle)
 
             reward = 1 - diff / 180
+            print("last step's reward is :" + str(reward))
 
             # learn
             td = critic.learn(state_last, reward, state)
@@ -447,16 +466,24 @@ def loop_record(control):
 
         print("apply movement ...")
 
-        # todo, give speed , radius, omega, first turn, then forward
+        # give speed , radius, omega, first turn, then forward
 
-        rad = math.radians(direction)
+        if direction > 180:
+            # turn left
+            rad = - math.radians(360 - direction)
+        else:
+            # turn right
+            rad = math.radians(direction)
+
+        # rad = math.radians(direction)
+
         control.speed = 0
         control.radius = 0
         control.omega = rad / TURN_SECONDS
 
         time.sleep(TURN_SECONDS)
 
-        control.speed = 1.5 / FORWARD_SECONDS
+        control.speed = STEP_SIZE / FORWARD_SECONDS
         control.radius = 0
         control.omega = 0
 

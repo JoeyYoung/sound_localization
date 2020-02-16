@@ -35,9 +35,11 @@ RECORD_WIDTH = 2
 CHANNELS = 4
 RATE = 16000
 RECORD_SECONDS = 3
+FORMAT = pyaudio.paInt16
+
 TURN_SECONDS = 3
 FORWARD_SECONDS = 3
-FORMAT = pyaudio.paInt16
+STEP_SIZE = 1
 
 MODEL_PATH = "../resource/model/save100.ckpt"
 WAV_PATH = "../resource/wav/"
@@ -433,6 +435,7 @@ def loop_record(control):
             diff = min(abs(max_angle - min_angle), 360 - max_angle + min_angle)
 
             reward = 1 - diff / 180
+            print("last step's reward is :" + str(reward))
 
             # learn
             td = critic.learn(state_last, reward, state)
@@ -444,16 +447,24 @@ def loop_record(control):
 
         print("apply movement ...")
 
-        # todo, give speed , radius, omega, first turn, then forward
+        # give speed , radius, omega, first turn, then forward
 
-        rad = math.radians(direction)
+        if direction > 180:
+            # turn left
+            rad = - math.radians(360 - direction)
+        else:
+            # turn right
+            rad = math.radians(direction)
+
+        # rad = math.radians(direction)
+
         control.speed = 0
         control.radius = 0
         control.omega = rad / TURN_SECONDS
 
         time.sleep(TURN_SECONDS)
 
-        control.speed = 1.5 / FORWARD_SECONDS
+        control.speed = STEP_SIZE / FORWARD_SECONDS
         control.radius = 0
         control.omega = 0
 
