@@ -31,8 +31,8 @@ RATE = 16000
 RECORD_SECONDS = 3
 FORMAT = pyaudio.paInt16
 
-TURN_SECONDS = 3
-FORWARD_SECONDS = 3
+TURN_SECONDS = 5
+FORWARD_SECONDS = 5
 STEP_SIZE = 1
 
 MODEL_PATH = "save/multiple/hole/save100.ckpt"
@@ -57,15 +57,185 @@ class Control:
 """
 
 
-# todo, corresponding 2D map
+# corresponding 2D map
 
 class Map:
-    def __int__(self):
-        self.walker_pos_x = 0
-        self.walker_pos_z = 0
+    def __init__(self):
+        # start position
+        # mass center of the walker
+        self.walker_pos_x = 1.0
+        self.walker_pos_z = 1.7
 
+        # world axis indicate walker head
+        self.walker_face_to = 0
+
+        # max length of walker, safe distance
+        self.walker_length = 1.3
+
+        # determine regions and gates
+
+    # just show next position and its facing direction
+    def next_walker_pos(self, direction):
+        move_towards = (self.walker_face_to + direction) % 360
+
+        x = None
+        z = None
+
+        if move_towards == 0:
+            x = self.walker_pos_x
+            z = self.walker_pos_z + STEP_SIZE
+        elif move_towards == 45:
+            x = self.walker_pos_x + (STEP_SIZE * math.sqrt(0.5))
+            z = self.walker_pos_z + (STEP_SIZE * math.sqrt(0.5))
+        elif move_towards == 90:
+            x = self.walker_pos_x + STEP_SIZE
+            z = self.walker_pos_z
+        elif move_towards == 135:
+            x = self.walker_pos_x + (STEP_SIZE * math.sqrt(0.5))
+            z = self.walker_pos_z - (STEP_SIZE * math.sqrt(0.5))
+        elif move_towards == 180:
+            x = self.walker_pos_x
+            z = self.walker_pos_z - STEP_SIZE
+        elif move_towards == 225:
+            x = self.walker_pos_x - (STEP_SIZE * math.sqrt(0.5))
+            z = self.walker_pos_z - (STEP_SIZE * math.sqrt(0.5))
+        elif move_towards == 270:
+            x = self.walker_pos_x - STEP_SIZE
+            z = self.walker_pos_z
+        elif move_towards == 315:
+            x = self.walker_pos_x - (STEP_SIZE * math.sqrt(0.5))
+            z = self.walker_pos_z + (STEP_SIZE * math.sqrt(0.5))
+        else:
+            print("Fail to cal next position: wrong direction")
+            exit(1)
+
+        return x, z, move_towards
+
+    # update position
     def update_walker_pos(self, direction):
-        pass
+        x, z, d = self.next_walker_pos(direction)
+        self.walker_pos_x = x
+        self.walker_pos_z = z
+        self.walker_face_to = d
+
+    # return the set of invalid directions (degrees)
+    def detect_invalid_directions(self):
+        # if 4.2 < next_z <= 5.7:
+        #     if self.walker_length <= next_x:
+        #         return True
+        #     else:
+        #         return False
+        #
+        # elif 1.7 <= next_z <= 4.2:
+        #     if self.walker_length <= next_x <= 3.3 - self.walker_length:
+        #         return True
+        #     else:
+        #         return False
+        #
+        # elif 0 <= next_z < 1.7 and 0 <= next_x <= 3.3:
+        #     return True
+        #
+        # elif 0 <= next_z < 1.7 and next_x < 0:
+        #     if self.walker_length <= next_z <= 1.7 - self.walker_length:
+        #         return True
+        #     else:
+        #         return False
+        #
+        # elif 0 <= next_z < 1.7 and 3.3 < next_x:
+        #     if self.walker_length <= next_z <= 1.7 - self.walker_length:
+        #         return True
+        #     else:
+        #         return False
+        #
+        # elif next_z < 0:
+        #     if next_x <= 1.7 - self.walker_length or next_x >= 1.7 + self.walker_length:
+        #         return True
+        #     else:
+        #         return False
+        #
+        # else:
+        #     print("Out of condition in direction validation ... ")
+        x = self.walker_pos_x
+        z = self.walker_pos_z
+
+        potential_dirs = [0, 45, 90, 135, 180, 225, 270, 315]
+
+        invalids = []
+
+        if 6.0 < z <= 7.4:
+            for dire in potential_dirs:
+                if (dire + self.walker_face_to) % 360 in [315, 0, 45]:
+                    invalids.append(dire)
+
+            if x < self.walker_length:
+                for dire in potential_dirs:
+                    if (dire + self.walker_face_to) % 360 in [225, 270, 315]:
+                        invalids.append(dire)
+
+            if x >= 3.2:
+                for dire in potential_dirs:
+                    if (dire + self.walker_face_to) % 360 in [0, 45, 135, 180, 225, 315]:
+                        invalids.append(dire)
+
+        elif 1.8 < z <= 6.0:
+            if x < self.walker_length:
+                for dire in potential_dirs:
+                    if (dire + self.walker_face_to) % 360 in [225, 270, 315]:
+                        invalids.append(dire)
+            elif x > 3.2 - self.walker_length:
+                for dire in potential_dirs:
+                    if (dire + self.walker_face_to) % 360 in [45, 90, 135]:
+                        invalids.append(dire)
+
+        elif 0 <= z <= 1.8:
+            if x < 0 or x > 3.2:
+                for dire in potential_dirs:
+                    if (dire + self.walker_face_to) % 360 in [0, 45, 135, 180, 225, 315]:
+                        invalids.append(dire)
+
+        elif z < 0:
+            if x < 1.7:
+                for dire in potential_dirs:
+                    if (dire + self.walker_face_to) % 360 in [0, 45, 90, 135]:
+                        invalids.append(dire)
+            if x > 1.9:
+                for dire in potential_dirs:
+                    if (dire + self.walker_face_to) % 360 in [0, 225, 270, 315]:
+                        invalids.append(dire)
+
+        else:
+            print("Out of condition for z .")
+
+        return invalids
+
+    # Hall - 0, out_room - 1, left - 2, right - 3, lab - 4, cvlab - 5
+    def detect_which_region(self):
+        x = self.walker_pos_x
+        z = self.walker_pos_z
+
+        current_region = None
+        if 0 <= x <= 3.2 and 0 <= z <= 7.5:
+            print("Detect walker in Region 0 .")
+            current_region = 0
+        elif 3.2 < x and 6.0 <= z <= 7.5:
+            print("Detect walker in Region 1 .")
+            current_region = 1
+        elif x < 0 and 0 <= z <= 1.8:
+            print("Detect walker in Region 2 .")
+            current_region = 2
+        elif 3.2 < x and 0 <= z <= 1.8:
+            print("Detect walker in Region 3 .")
+            current_region = 3
+        elif x <= 1.7 and z < 0:
+            print("Detect walker in Region 4 .")
+            current_region = 4
+        elif x >= 3.2 and z < 0:
+            print("Detect walker in Region 5 .")
+            current_region = 5
+        else:
+            print("Fail to detect walker region .")
+
+        return current_region
 
 
 """
@@ -372,6 +542,7 @@ def loop_record(control):
 
     saved_count = 0
     gccGenerator = GccGenerator()
+    map = Map()
 
     actor = Actor(366, 8, lr=0.004)
     critic = Critic(366, 8, lr=0.003, gamma=0.95)
@@ -439,14 +610,21 @@ def loop_record(control):
         gcc = gccGenerator.cal_gcc_online(WAV_PATH, saved_count)
         state = np.array(gcc)[np.newaxis, :]
 
-        # todo, define invalids, based on constructed map
-        action, _ = actor.output_action(state, [])
+        # todo, define invalids, based on constructed map % restrict regions
+        invalids_dire = map.detect_invalid_directions()
 
+        # transform walker direction to mic direction
+        invalids_idx = [(i + 45) % 360 / 45 for i in invalids_dire]
+
+        action, _ = actor.output_action(state, invalids_idx)
+
+        # transform mic direction to walker direction
         direction = (action + 6) % 7 * 45
 
         # bias is 45 degree, ok
         print("Estimated direction is :" + str(direction))
 
+        # todo, set different rewards and learn
         if saved_count > 0:
             max_angle = max(float(direction), float(direction_last))
             min_angle = min(float(direction), float(direction_last))
@@ -466,16 +644,16 @@ def loop_record(control):
 
         print("apply movement ...")
 
-        # give speed , radius, omega, first turn, then forward
+        # todo, here for test, readin direction to guide or specific direction
+        # direction = int(input())
 
+        # give speed , radius, omega, first turn, then forward
         if direction > 180:
             # turn left
-            rad = - math.radians(360 - direction)
+            rad = math.radians(360 - direction)
         else:
             # turn right
-            rad = math.radians(direction)
-
-        # rad = math.radians(direction)
+            rad = - math.radians(direction)
 
         control.speed = 0
         control.radius = 0
@@ -483,21 +661,62 @@ def loop_record(control):
 
         time.sleep(TURN_SECONDS)
 
-        control.speed = STEP_SIZE / FORWARD_SECONDS
+        control.speed = - STEP_SIZE / FORWARD_SECONDS
         control.radius = 0
         control.omega = 0
 
         time.sleep(FORWARD_SECONDS)
 
         print("movement done.")
+        control.speed = 0
+
+        map.update_walker_pos(direction)
+        print(map.detect_invalid_directions())
+        print(map.detect_which_region())
 
         # begin next step
         saved_count += 1
 
 
+# test ok for invalid turning directions
+def test_route():
+    map = Map()
+
+    print("======")
+    print(map.walker_pos_x)
+    print(map.walker_pos_z)
+    print(map.detect_invalid_directions())
+
+    print("======")
+    map.update_walker_pos(180)
+    print(map.walker_pos_x)
+    print(map.walker_pos_z)
+    print(map.detect_invalid_directions())
+
+    print("======")
+    map.update_walker_pos(90)
+    print(map.walker_pos_x)
+    print(map.walker_pos_z)
+    print(map.detect_invalid_directions())
+
+    print("======")
+    map.update_walker_pos(0)
+    print(map.walker_pos_x)
+    print(map.walker_pos_z)
+    print(map.detect_invalid_directions())
+
+    print("======")
+    map.update_walker_pos(0)
+    print(map.walker_pos_x)
+    print(map.walker_pos_z)
+    print(map.detect_invalid_directions())
+
+
 if __name__ == '__main__':
     cd = Control()
     loop_record(cd)
+
+    # test_route()
 
     # cd = CD.ControlDriver()
     # p1 = threading.Thread(target=loop_record, args=(cd,))
