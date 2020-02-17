@@ -146,6 +146,74 @@ def generate_gcc_real(input_dir, output_dir, output_file):
             print(res[k], file=f)
 
 
+# collect real data using walker
+def generate_gcc_deploy(input_dir, output_dir, output_file):
+    res = collections.defaultdict(list)
+    gcc_width_half = 30
+    # the whole vector length is 61
+
+    files = os.listdir(input_dir)
+    for file in files:
+        # skip dir
+        name = str(file.title()).lower()
+
+        if os.path.isdir(file) or name[:4] != 'real':
+            continue
+
+        file_names = name.split('_')
+        pos = file_names[1] + "_" + file_names[2]
+
+        # meet old walker pos
+        if res.get(pos) is not None:
+            continue
+        else:
+            temp = int(file_names[2])
+
+            index_fill = int(temp / 45)
+            label = [0] * 8
+            label[index_fill] = 1
+
+            # read 4 mirs, compute features
+
+            min_len = 999999
+            fs = 0
+
+            # i indicates 几号位
+            for i in range(1, 5):
+                mic = name[:len(name) - 5] + str(i) + ".wav"
+                wav = wave.open(os.path.join(input_dir, mic), 'rb')
+
+                n_frame = wav.getnframes()
+                fs = wav.getframerate()
+
+                data = np.frombuffer(wav.readframes(n_frame), dtype=np.short)
+
+                if len(data) < min_len:
+                    min_len = len(data)
+
+                locals()['data%d' % i] = data
+
+            gcc_vector = []
+
+            for i in range(1, 5):
+                locals()['data%d' % i] = locals()['data%d' % i][:min_len]
+
+            for i in range(1, 5):
+                for j in range(i + 1, 5):
+                    tau, cc = gcc_phat(locals()['data%d' % i], locals()['data%d' % j], fs)
+                    for k in range(min_len - gcc_width_half, min_len + gcc_width_half + 1):
+                        gcc_vector.append(cc[k])
+            res[pos] = [gcc_vector, label]
+
+        print(len(res.keys()))  # 1088
+
+    # write into file
+
+    with open(os.path.join(output_dir, output_file), 'w') as f:
+        for k in res.keys():
+            print(res[k], file=f)
+
+
 # rsc back simulated env
 # data[1] represents right
 def generate_gcc_simu_rscback(input_dir, output_dir, output_file):
