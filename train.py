@@ -25,15 +25,15 @@ class Supervisor:
         init parameters, layers
     """
 
-    def __init__(self, n_features, n_actions, lr=0.001):
+    def __init__(self, n_features, n_actions, lr=0.0001):
         self.n_features = n_features
         self.n_actions = n_actions
         self.lr = lr
-        self.max_epochs = 300
+        self.max_epochs = 50
 
         # fixme, use rl as dataset
-        self.train_data_size = 188
-        self.test_data_size = 12  # 400
+        self.train_data_size = 199
+        self.test_data_size = 0  # 400
         self.batch_size = 1
 
         self.s = tf.placeholder(tf.float32, [None, self.n_features], name='gcc')
@@ -120,7 +120,8 @@ class Supervisor:
 
     def train_step(self):
         # self.load_data("./gccdata/multiple/hole_eight", "vector_train", train=True)
-        self.load_data("./audio/gcc", "rscback_aaaa", train=True)
+        # self.load_data("./audio/gcc", "rscback_aaaa", train=True)
+        self.load_data("./gcc/cyc4", "cyc4", train=True)
         records_acu = []
         records_los = []
 
@@ -171,8 +172,8 @@ class Supervisor:
 
             records_acu.append(correct / self.train_data_size)
             records_los.append(sum_loss / self.train_data_size)
-            if epoch % 20 == 0 and epoch != 0:
-                self.saver.save(self.sess, "save/rsc_back/save%d.ckpt" % epoch)
+            if epoch % 10 == 0 and epoch != 0:
+                self.saver.save(self.sess, "save/cyc4/save%d.ckpt" % epoch)
 
         # with open('save/multiple/eight/records_acu', 'w') as f:
         #     f.write(str(records_acu))
@@ -187,11 +188,11 @@ class Supervisor:
         print("Start predict on vector_test data ....")
 
         # self.load_data("./gccdata/multiple/hole_eight", "vector_test", train=False)
-        self.load_data("./audio/gcc", "rscback_real", train=False)
+        self.load_data("./gcc/cyc4/", "cyc4_test", train=False)
 
         # self.saver.restore(self.sess, "save/multiple/hole/save10.ckpt")
         # self.saver.restore(self.sess, "save/8x3x8_9pos/save100.ckpt")
-        self.saver.restore(self.sess, "save/rsc_back/save20.ckpt")
+        self.saver.restore(self.sess, "./save/cyc4/save50.ckpt")
 
         correct = 0.0
         for i in range(self.test_data_size):
@@ -251,5 +252,5 @@ class Supervisor:
 if __name__ == '__main__':
     # fixme, change features dim here,
     sup = Supervisor(366, 8)
-    # sup.train_step()
-    sup.predict_step()
+    sup.train_step()
+    # sup.predict_step()

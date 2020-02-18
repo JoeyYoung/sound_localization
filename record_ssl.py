@@ -42,16 +42,6 @@ FORWARD_SECONDS = 2
 WAV_PATH = "../resource/wav/"
 
 
-def read_wav(file):
-    wav = wave.open(file, 'rb')
-    fn = wav.getnframes()  # 207270
-    fr = wav.getframerate()  # 44100
-    fw = wav.getsampwidth()  # 44100
-    f_data = wav.readframes(fn)
-    data = np.frombuffer(f_data, dtype=np.short)
-    return data
-
-
 def cal_volume(waveData, frameSize=256, overLap=128):
     waveData = waveData * 1.0 / max(abs(waveData))  # normalization
     wlen = len(waveData)
@@ -180,6 +170,7 @@ def loop_record(control):
 
             # if exceed, break, split to process, then action. After action done, begin monitor
             if judge_active(os.path.join(WAV_PATH, wave_output_filename)) is True:
+                print("active ... ")
                 break
 
         """

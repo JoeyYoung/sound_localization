@@ -265,20 +265,8 @@ def generate_gcc_simu_rscback(input_dir, output_dir, output_file):
 
                 # data[0] represents right, data[1] represents left
 
-                if i == 1:
-                    data_pro = data[1]
-                elif i == 2:
-                    # data_pro = data[0]
-                    data_pro = data[1]
-                elif i == 3:
-                    data_pro = data[1]
-                elif i == 4:
-                    # data_pro = data[1]
-                    data_pro = data[1]
-                    # [(data[0][j] + data[1][j]) / 2 for j in range(len(data[0]))]
-                else:
-                    data_pro = [0]
-                    exit()
+                data_pro = data[1]
+                # [(data[0][j] + data[1][j]) / 2 for j in range(len(data[0]))]
 
                 if len(data_pro) < min_len:
                     min_len = len(data_pro)
@@ -840,7 +828,13 @@ if __name__ == '__main__':
 
     # generate_gcc(wavdir5, gccdir, output_file='rl', average=True, vector=True, savepos=True)
 
-    for i in range(0, 12):
-        wavedir = './audio/rscback12/src%d' % i
-        gccdir = './audio/gcc'
-        generate_gcc_simu_rscback(wavedir, gccdir, 'src%d' % i)
+    # for i in range(11, 12):
+    #     wavedir = './wav/rsc_back_wo_diff/src%d' % i
+    #     gccdir = './gcc/rsc_back_wo_diff'
+    #     generate_gcc_simu_rscback(wavedir, gccdir, 'src%d' % i)
+
+    # wavedir = './wav/real_cyc4'
+    gccdir = './gcc/cyc4'
+    # generate_gcc_deploy(wavedir, gccdir, 'cyc4')
+
+    split_test_tain(gccdir, unionfile='cyc4', testfire='cyc4_test', trainfire='cyc4_train', test_size=10, train_size=189)
