@@ -650,8 +650,9 @@ def loop_record(control):
         """
 
         # active detection
+        print("start monitoring ... ")
         while True:
-            print("start monitoring ... ")
+            # print("start monitoring ... ")
             p = pyaudio.PyAudio()
             stream = p.open(format=p.get_format_from_width(RECORD_WIDTH),
                             channels=CHANNELS,
@@ -669,7 +670,7 @@ def loop_record(control):
             stream.close()
             p.terminate()
 
-            print("End monitoring ... ")
+            # print("End monitoring ... ")
 
             # temp store into file
             wave_output_filename = str(saved_count) + ".wav"
@@ -682,6 +683,7 @@ def loop_record(control):
 
             # if exceed, break, split to process, then action. After action done, begin monitor
             if judge_active(os.path.join(WAV_PATH, wave_output_filename)) is True:
+                print("Detected ... ")
                 break
 
         """
