@@ -214,6 +214,104 @@ def generate_gcc_deploy(input_dir, output_dir, output_file):
             print(res[k], file=f)
 
 
+# collect real data using walker
+def generate_gcc_bias(input_dir, output_dir, output_file):
+    res = collections.defaultdict(list)
+    gcc_width_half = 50
+    # the whole vector length is 61
+
+    files = os.listdir(input_dir)
+    for file in files:
+        # skip dir
+        name = str(file.title()).lower()
+
+        if os.path.isdir(file) or name[:4] != 'real':
+            continue
+
+        file_names = name.split('_')
+        pos = file_names[1] + "_" + file_names[2]
+
+        # meet old walker pos
+        if res.get(pos) is not None:
+            continue
+        else:
+            temp = int(file_names[2])
+
+            index_fill = int(temp / 45)
+            label = [0] * 8
+            label[index_fill] = 1
+
+            # read 4 mirs, compute features
+
+            min_len = 999999
+            fs = 0
+
+            # i indicates 几号位
+            for i in range(1, 5):
+                mic = name[:len(name) - 5] + str(i) + ".wav"
+                wav = wave.open(os.path.join(input_dir, mic), 'rb')
+
+                n_frame = wav.getnframes()
+                fs = wav.getframerate()
+
+                data = np.frombuffer(wav.readframes(n_frame), dtype=np.short)
+
+                if len(data) < min_len:
+                    min_len = len(data)
+
+                locals()['data%d' % i] = data
+
+            gcc_vector = []
+
+            for i in range(1, 5):
+                locals()['data%d' % i] = locals()['data%d' % i][:min_len]
+
+            for i in range(1, 5):
+                for j in range(i + 1, 5):
+                    tau, cc = gcc_phat(locals()['data%d' % i], locals()['data%d' % j], fs)
+                    temp_gcc = []
+                    for k in range(min_len - gcc_width_half, min_len + gcc_width_half + 1):
+                        temp_gcc.append(cc[k])
+
+                    gcc_vector.append(temp_gcc)
+
+            # add bias
+            pair1 = gcc_vector[0]
+            pair2 = gcc_vector[1]
+            pair3 = gcc_vector[2]
+            pair4 = gcc_vector[3]
+            pair5 = gcc_vector[4]
+            pair6 = gcc_vector[5]
+
+            center = int(len(pair1) / 2)
+
+            p1 = pair1[center - gcc_width_half:center + gcc_width_half]
+            p2 = pair2[center - gcc_width_half:center + gcc_width_half]
+            p3 = pair3[center - gcc_width_half:center + gcc_width_half]
+            p4 = pair4[center - gcc_width_half:center + gcc_width_half]
+            p5 = pair5[center - gcc_width_half:center + gcc_width_half]
+            p6 = pair6[center - gcc_width_half:center + gcc_width_half]
+
+            bias1 = list(p1).index(np.max(p1)) - gcc_width_half
+            bias2 = list(p2).index(np.max(p2)) - gcc_width_half
+            bias3 = list(p3).index(np.max(p3)) - gcc_width_half
+            bias4 = list(p4).index(np.max(p4)) - gcc_width_half
+            bias5 = list(p5).index(np.max(p5)) - gcc_width_half
+            bias6 = list(p6).index(np.max(p6)) - gcc_width_half
+
+            bias = [bias1, bias2, bias3, bias4, bias5, bias6]
+
+            res[pos] = [bias, label]
+
+        print(len(res.keys()))  # 1088
+
+    # write into file
+
+    with open(os.path.join(output_dir, output_file), 'w') as f:
+        for k in res.keys():
+            print(res[k], file=f)
+
+
 # rsc back simulated env
 # data[1] represents right
 def generate_gcc_simu_rscback(input_dir, output_dir, output_file):
@@ -833,8 +931,12 @@ if __name__ == '__main__':
     #     gccdir = './gcc/rsc_back_wo_diff'
     #     generate_gcc_simu_rscback(wavedir, gccdir, 'src%d' % i)
 
-    # wavedir = './wav/real_cyc4'
+    wavedir = './wav/real_cyc4'
     gccdir = './gcc/cyc4'
-    # generate_gcc_deploy(wavedir, gccdir, 'cyc4')
+    generate_gcc_bias(wavedir, gccdir, 'cyc4_bias')
 
-    split_test_tain(gccdir, unionfile='cyc4', testfire='cyc4_test', trainfire='cyc4_train', test_size=10, train_size=189)
+    # split_test_tain(gccdir, unionfile='cyc4', testfire='cyc4_test', trainfire='cyc4_train', test_size=30,
+    # train_size=169)
+
+    # split_test_tain(gccdir, unionfile='cyc4', testfire='cyc4_test', trainfire='cyc4_train', test_size=30,
+    #                 train_size=169)

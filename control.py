@@ -23,6 +23,9 @@ gpu_options = tf.GPUOptions(allow_growth=True)
     Record Parameters
 """
 
+GCC_LENG = 366
+GCC_BIAS = 6
+ACTION_SPACE = 8
 CHUNK = 1024
 RECORD_DEVICE_NAME = "USB Camera-B4.09.24.1"
 RECORD_WIDTH = 2
@@ -35,8 +38,8 @@ TURN_SECONDS = 5
 FORWARD_SECONDS = 5
 STEP_SIZE = 1
 
-MODEL_PATH = "save/multiple/hole/save100.ckpt"
-WAV_PATH = "online_wav/"
+MODEL_PATH = "./save/cyc4/bias/save20.ckpt"
+WAV_PATH = "./online_wav/"
 
 """
     Digital Driver Part
@@ -246,6 +249,7 @@ class Map:
 class GccGenerator:
     def __init__(self):
         self.gcc_width_half = 30
+        self.gcc_width_half_bias = 50
 
     def gcc_phat(self, sig, refsig, fs=1, max_tau=None, interp=1):
         if isinstance(sig, list):
@@ -277,7 +281,7 @@ class GccGenerator:
 
         return tau, cc
 
-    def cal_gcc_online(self, input_dir, save_count):
+    def cal_gcc_online(self, input_dir, save_count, type='Vector'):
         for i in range(1, 5):
             mic_name = str(save_count) + "_" + "mic%d" % i + ".wav"
             wav = wave.open(os.path.join(input_dir, mic_name), 'rb')
@@ -292,11 +296,42 @@ class GccGenerator:
 
         center = int(len(locals()['data%d' % 1]) / 2)
 
+        gcc_bias = []
         for i in range(1, 5):
             for j in range(i + 1, 5):
                 tau, cc = self.gcc_phat(locals()['data%d' % i], locals()['data%d' % j], fs)
                 for k in range(center - self.gcc_width_half, center + self.gcc_width_half + 1):
                     gcc_vector.append(cc[k])
+                gcc_bias.append(cc)
+
+        # add bias
+        pair1 = gcc_bias[0]
+        pair2 = gcc_bias[1]
+        pair3 = gcc_bias[2]
+        pair4 = gcc_bias[3]
+        pair5 = gcc_bias[4]
+        pair6 = gcc_bias[5]
+
+        center = int(len(pair1) / 2)
+
+        p1 = pair1[center - self.gcc_width_half_bias:center + self.gcc_width_half_bias]
+        p2 = pair2[center - self.gcc_width_half_bias:center + self.gcc_width_half_bias]
+        p3 = pair3[center - self.gcc_width_half_bias:center + self.gcc_width_half_bias]
+        p4 = pair4[center - self.gcc_width_half_bias:center + self.gcc_width_half_bias]
+        p5 = pair5[center - self.gcc_width_half_bias:center + self.gcc_width_half_bias]
+        p6 = pair6[center - self.gcc_width_half_bias:center + self.gcc_width_half_bias]
+
+        bias1 = list(p1).index(np.max(p1)) - self.gcc_width_half_bias
+        bias2 = list(p2).index(np.max(p2)) - self.gcc_width_half_bias
+        bias3 = list(p3).index(np.max(p3)) - self.gcc_width_half_bias
+        bias4 = list(p4).index(np.max(p4)) - self.gcc_width_half_bias
+        bias5 = list(p5).index(np.max(p5)) - self.gcc_width_half_bias
+        bias6 = list(p6).index(np.max(p6)) - self.gcc_width_half_bias
+
+        bias = [bias1, bias2, bias3, bias4, bias5, bias6]
+
+        if type == 'Bias':
+            return bias
 
         return gcc_vector
 
@@ -376,8 +411,8 @@ class Actor:
             act = np.random.choice(np.arange(acts.shape[1]))
         else:
             p /= p.sum()
-            act = np.random.choice(np.arange(acts.shape[1]), p=p)
-            # act = np.argmax(p)
+            # act = np.random.choice(np.arange(acts.shape[1]), p=p)
+            act = np.argmax(p)
 
         return act, p
 
@@ -544,8 +579,8 @@ def loop_record(control):
     gccGenerator = GccGenerator()
     map = Map()
 
-    actor = Actor(366, 8, lr=0.004)
-    critic = Critic(366, 8, lr=0.003, gamma=0.95)
+    actor = Actor(GCC_BIAS, ACTION_SPACE, lr=0.004)
+    critic = Critic(GCC_BIAS, ACTION_SPACE, lr=0.003, gamma=0.95)
 
     # todo, fine-tuned pre-train model
     actor.load_trained_model(MODEL_PATH)
@@ -607,7 +642,7 @@ def loop_record(control):
 
         print("producing action ...")
 
-        gcc = gccGenerator.cal_gcc_online(WAV_PATH, saved_count)
+        gcc = gccGenerator.cal_gcc_online(WAV_PATH, saved_count, type='Bias')
         state = np.array(gcc)[np.newaxis, :]
 
         # todo, define invalids, based on constructed map % restrict regions
@@ -645,7 +680,7 @@ def loop_record(control):
         print("apply movement ...")
 
         # todo, here for test, readin direction to guide or specific direction
-        # direction = int(input())
+        direction = int(input())
 
         # give speed , radius, omega, first turn, then forward
         if direction > 180:
@@ -661,7 +696,9 @@ def loop_record(control):
 
         time.sleep(TURN_SECONDS)
 
-        control.speed = - STEP_SIZE / FORWARD_SECONDS
+        control.omega = 0
+
+        control.speed = STEP_SIZE / FORWARD_SECONDS
         control.radius = 0
         control.omega = 0
 
