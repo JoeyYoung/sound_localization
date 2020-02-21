@@ -42,7 +42,7 @@ RATE = 16000
 RECORD_SECONDS = 0.5
 FORMAT = pyaudio.paInt16
 
-FORWARD_SECONDS = 5
+FORWARD_SECONDS = 3
 STEP_SIZE = 1
 
 MODEL_PATH = "../resource/model/save20.ckpt"
@@ -63,11 +63,11 @@ class Map:
     def __init__(self):
         # start position
         # mass center of the walker
-        self.walker_pos_x = 1.0
-        self.walker_pos_z = 1.7
+        self.walker_pos_x = None
+        self.walker_pos_z = None
 
         # world axis indicate walker head
-        self.walker_face_to = 0
+        self.walker_face_to = None
 
         # max length of walker, safe distance
         self.walker_length = 1.3
@@ -77,6 +77,8 @@ class Map:
         self.gate_region_2 = [0, 0.9]
         self.gate_region_3 = [3.2, 0.9]
         self.gate_region_4 = [0.8, 0]
+
+        self.hall_track = [0, 0, 0, 270]
 
     # just show next position and its facing direction
     def next_walker_pos(self, direction):
@@ -131,17 +133,17 @@ class Map:
 
         invalids = []
 
-        if 6.0 < z <= 7.4:
-            for dire in potential_dirs:
-                if (dire + self.walker_face_to) % 360 in [315, 0, 45]:
-                    invalids.append(dire)
+        if 6.0 < z <= 7.5:
+            # for dire in potential_dirs:
+            #     if (dire + self.walker_face_to) % 360 in [315, 0, 45]:
+            #         invalids.append(dire)
 
             if x < self.walker_length:
                 for dire in potential_dirs:
                     if (dire + self.walker_face_to) % 360 in [225, 270, 315]:
                         invalids.append(dire)
 
-            if x >= 3.2:
+            if 3.2 <= x:
                 for dire in potential_dirs:
                     if (dire + self.walker_face_to) % 360 in [0, 45, 135, 180, 225, 315]:
                         invalids.append(dire)
@@ -545,12 +547,14 @@ def judge_active(wave_output_filename):
     threshold_v = 230
 
     if v1 > threshold_v or v2 > threshold_v or v3 > threshold_v or v4 > threshold_v:
+        print("Voice intensity: ", v1, v2, v3, v4)
         return True
     else:
         return False
 
 
 def SSLturning(cd, angle):
+    time_sleep_value = 0.01
     cd.speed = 0
     cd.omega = 0
     cd.radius = 0
@@ -578,7 +582,7 @@ def SSLturning(cd, angle):
             cd.omega = - math.pi / 6
         cd.radius = 0
         cd.speed = 0
-        time.sleep(0.1)
+        time.sleep(time_sleep_value)
         # print('start moving...')
 
         while 1:
@@ -589,14 +593,14 @@ def SSLturning(cd, angle):
             while 1:
                 if abs(cd.position[2] - expectedTHETA) <= 0.2:
                     cd.omega = 0
-                    time.sleep(0.1)
+                    time.sleep(time_sleep_value)
                     # print('reached')
                     break
         elif (cd.position[2] * expectedTHETA) >= 0 and rad < 0:
             while 1:
                 if abs(expectedTHETA - cd.position[2]) <= 0.2:
                     cd.omega = 0
-                    time.sleep(0.1)
+                    time.sleep(time_sleep_value)
                     # print('reached')
                     break
         else:
@@ -610,7 +614,7 @@ def SSLturning(cd, angle):
     # print('final position: ', cd.position[2])
 
 
-def loop_record(control, source='0'):
+def loop_record(control, source='1'):
     device_index = -1
 
     p = pyaudio.PyAudio()
@@ -658,7 +662,10 @@ def loop_record(control, source='0'):
 
     # steps
     while True:
-        print(map.print_walker_status())
+        print("===== %d =====" % saved_count)
+        map.print_walker_status()
+        map.detect_which_region()
+
         """
             Record
         """
@@ -734,7 +741,12 @@ def loop_record(control, source='0'):
         direction = (action + 6) % 7 * 45
 
         # bias is 45 degree, ok
-        print("Estimated direction of walker :" + str(direction))
+        print("Estimated direction of walker : ", direction)
+
+        # fixme, for test or hard code, cover direction
+        # direction = int(input())
+
+        print("Applied direction of walker :", direction)
 
         # todo, set different rewards and learn
         if saved_count > 0:
@@ -748,21 +760,21 @@ def loop_record(control, source='0'):
                 reward = 1 - diff / 180
                 print("single room 's reward is :" + str(reward))
             elif source == '1':
-                reward = 1 - map.cal_distance_region(1) / 6
+                reward = 1 - map.cal_distance_region(1) / 9
                 print("src 1 's reward is :", reward)
             elif source == '4':
-                reward = 1 - map.cal_distance_region(4) / 4
+                reward = 1 - map.cal_distance_region(4) / 3
                 print("src 4 's reward is :", reward)
 
             # learn
             # td = critic.learn(state_last, reward, state)
             # actor.learn(state_last, action_last, td)
 
-        direction = int(input())
-
         state_last = state
-        action_last = action
         direction_last = direction
+
+        # transfer given direction into action index, based on taken direction
+        action_last = (direction + 45) % 360 / 45
 
         print("apply movement ...")
 
@@ -776,9 +788,6 @@ def loop_record(control, source='0'):
         print("movement done.")
 
         map.update_walker_pos(direction)
-        print(map.detect_invalid_directions())
-        print(map.detect_which_region())
-
         saved_count += 1
 
 
