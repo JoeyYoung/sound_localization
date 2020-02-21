@@ -39,7 +39,7 @@ CHANNELS = 4
 RATE = 16000
 
 # fixme, set minimum monitoring time
-RECORD_SECONDS = 0.5
+RECORD_SECONDS = 1
 FORMAT = pyaudio.paInt16
 
 FORWARD_SECONDS = 3
@@ -78,7 +78,9 @@ class Map:
         self.gate_region_3 = [3.2, 0.9]
         self.gate_region_4 = [0.8, 0]
 
-        self.hall_track = [0, 0, 0, 270]
+        self.hall_r2_r1 = [0, 0, 0, 270]
+        self.hall_r2_r4 = [0, 0, 0]
+        self.hall_same = [45, 315, 0]
 
     # just show next position and its facing direction
     def next_walker_pos(self, direction):
@@ -163,7 +165,13 @@ class Map:
                 for dire in potential_dirs:
                     if (dire + self.walker_face_to) % 360 in [0, 45, 135, 180, 225, 315]:
                         invalids.append(dire)
-            if 1.7 < x <= 3.2:
+
+            if 0 <= x < 1.7:
+                for dire in potential_dirs:
+                    if (dire + self.walker_face_to) % 360 in [135, 225, 315]:
+                        invalids.append(dire)
+
+            if 1.7 <= x <= 3.2:
                 for dire in potential_dirs:
                     if (dire + self.walker_face_to) % 360 in [135, 180, 225]:
                         invalids.append(dire)
@@ -554,7 +562,7 @@ def judge_active(wave_output_filename):
 
 
 def SSLturning(cd, angle):
-    time_sleep_value = 0.01
+    time_sleep_value = 0.05
     cd.speed = 0
     cd.omega = 0
     cd.radius = 0
@@ -646,9 +654,11 @@ def loop_record(control, source='1'):
     map = Map()
 
     # fixme, set start position
-    map.walker_pos_x = -2.1
-    map.walker_pos_z = 0.9
-    map.walker_face_to = 90
+    map.walker_pos_x = 1.0
+    map.walker_pos_z = 1.85
+    map.walker_face_to = 0
+    # 1.0, 1.85, 0
+    # -3.1, 0.9, 90
 
     actor = Actor(GCC_BIAS, ACTION_SPACE, lr=0.004)
     critic = Critic(GCC_BIAS, ACTION_SPACE, lr=0.003, gamma=0.95)
@@ -718,7 +728,7 @@ def loop_record(control, source='1'):
 
         print("producing action ...")
 
-        gcc = gccGenerator.cal_gcc_online(WAV_PATH, saved_count, type='Bias', debug=True)
+        gcc = gccGenerator.cal_gcc_online(WAV_PATH, saved_count, type='Bias', debug=False)
         state = np.array(gcc)[np.newaxis, :]
 
         print("GCC Bias :", gcc)
@@ -745,6 +755,8 @@ def loop_record(control, source='1'):
 
         # fixme, for test or hard code, cover direction
         # direction = int(input())
+        if source == '0' and saved_count < len(map.hall_same)-1:
+            direction = map.hall_same[saved_count]
 
         print("Applied direction of walker :", direction)
 
@@ -759,16 +771,20 @@ def loop_record(control, source='1'):
 
                 reward = 1 - diff / 180
                 print("single room 's reward is :" + str(reward))
+                # td = critic.learn(state_last, reward, state)
+                # actor.learn(state_last, action_last, td)
+
             elif source == '1':
                 reward = 1 - map.cal_distance_region(1) / 9
                 print("src 1 's reward is :", reward)
+                td = critic.learn(state_last, reward, state)
+                actor.learn(state_last, action_last, td)
+
             elif source == '4':
                 reward = 1 - map.cal_distance_region(4) / 3
                 print("src 4 's reward is :", reward)
-
-            # learn
-            # td = critic.learn(state_last, reward, state)
-            # actor.learn(state_last, action_last, td)
+                td = critic.learn(state_last, reward, state)
+                actor.learn(state_last, action_last, td)
 
         state_last = state
         direction_last = direction
