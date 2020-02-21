@@ -31,11 +31,11 @@ RECORD_DEVICE_NAME = "USB Camera-B4.09.24.1"
 RECORD_WIDTH = 2
 CHANNELS = 4
 RATE = 16000
-RECORD_SECONDS = 3
+RECORD_SECONDS = 1
 FORMAT = pyaudio.paInt16
 
 TURN_SECONDS = 5
-FORWARD_SECONDS = 5
+FORWARD_SECONDS = 3
 STEP_SIZE = 1
 
 MODEL_PATH = "./save/cyc4/bias/save20.ckpt"
@@ -66,16 +66,20 @@ class Map:
     def __init__(self):
         # start position
         # mass center of the walker
-        self.walker_pos_x = 1.0
-        self.walker_pos_z = 1.7
+        self.walker_pos_x = -2  # 1.0
+        self.walker_pos_z = 0.9  # 1.7
 
         # world axis indicate walker head
-        self.walker_face_to = 0
+        self.walker_face_to = 90
 
         # max length of walker, safe distance
         self.walker_length = 1.3
 
         # determine regions and gates
+        self.gate_region_1 = [3.2, 7.5]
+        self.gate_region_2 = [0, 0.9]
+        self.gate_region_3 = [3.2, 0.9]
+        self.gate_region_4 = [0.8, 0]
 
     # just show next position and its facing direction
     def next_walker_pos(self, direction):
@@ -195,6 +199,10 @@ class Map:
                 for dire in potential_dirs:
                     if (dire + self.walker_face_to) % 360 in [0, 45, 135, 180, 225, 315]:
                         invalids.append(dire)
+            if 1.7 < x <= 3.2:
+                for dire in potential_dirs:
+                    if (dire + self.walker_face_to) % 360 in [135, 180, 225]:
+                        invalids.append(dire)
 
         elif z < 0:
             if x < 1.7:
@@ -239,6 +247,27 @@ class Map:
             print("Fail to detect walker region .")
 
         return current_region
+
+    def cal_distance_region(self, region_num):
+        if region_num == 1:
+            return np.abs(self.gate_region_1[0] - self.walker_pos_x) + np.abs(self.gate_region_1[1] - self.walker_pos_z)
+
+        elif region_num == 2:
+            return np.abs(self.gate_region_2[0] - self.walker_pos_x) + np.abs(self.gate_region_2[1] - self.walker_pos_z)
+
+        elif region_num == 3:
+            return np.abs(self.gate_region_3[0] - self.walker_pos_x) + np.abs(self.gate_region_3[1] - self.walker_pos_z)
+
+        elif region_num == 4:
+            return np.abs(self.gate_region_4[0] - self.walker_pos_x) + np.abs(self.gate_region_4[1] - self.walker_pos_z)
+
+        else:
+            print("no such distance to region %d" % region_num)
+
+    def print_walker_status(self):
+        print("walker at x: ", self.walker_pos_x)
+        print("walker at z: ", self.walker_pos_z)
+        print("walker face to: ", self.walker_face_to)
 
 
 """
@@ -548,7 +577,7 @@ def judge_active(wave_output_filename):
         return False
 
 
-def loop_record(control):
+def loop_record(control, source='0'):
     device_index = -1
 
     p = pyaudio.PyAudio()
@@ -597,8 +626,8 @@ def loop_record(control):
         """
 
         # active detection
+        print("start monitoring ... ")
         while True:
-            print("start monitoring ... ")
             p = pyaudio.PyAudio()
             stream = p.open(format=p.get_format_from_width(RECORD_WIDTH),
                             channels=CHANNELS,
@@ -616,8 +645,6 @@ def loop_record(control):
             stream.close()
             p.terminate()
 
-            print("End monitoring ... ")
-
             # temp store into file
             wave_output_filename = str(saved_count) + ".wav"
             wf = wave.open(os.path.join(WAV_PATH, wave_output_filename), 'wb')
@@ -629,6 +656,7 @@ def loop_record(control):
 
             # if exceed, break, split to process, then action. After action done, begin monitor
             if judge_active(os.path.join(WAV_PATH, wave_output_filename)) is True:
+                print("detected ...")
                 break
 
         """
@@ -651,7 +679,7 @@ def loop_record(control):
         # transform walker direction to mic direction
         invalids_idx = [(i + 45) % 360 / 45 for i in invalids_dire]
 
-        action, _ = actor.output_action(state, invalids_idx)
+        action, _ = actor.output_action(state, [])
 
         # transform mic direction to walker direction
         direction = (action + 6) % 7 * 45
@@ -661,17 +689,25 @@ def loop_record(control):
 
         # todo, set different rewards and learn
         if saved_count > 0:
-            max_angle = max(float(direction), float(direction_last))
-            min_angle = min(float(direction), float(direction_last))
+            reward = None
+            if source == '0':
+                max_angle = max(float(direction), float(direction_last))
+                min_angle = min(float(direction), float(direction_last))
 
-            diff = min(abs(max_angle - min_angle), 360 - max_angle + min_angle)
+                diff = min(abs(max_angle - min_angle), 360 - max_angle + min_angle)
 
-            reward = 1 - diff / 180
-            print("last step's reward is :" + str(reward))
+                reward = 1 - diff / 180
+                print("single room 's reward is :" + str(reward))
+            elif source == '1':
+                reward = 1 - map.cal_distance_region(1) / 6
+                print("src 1 's reward is :", reward)
+            elif source == '4':
+                reward = 1 - map.cal_distance_region(4) / 4
+                print("src 4 's reward is :", reward)
 
-            # learn
-            td = critic.learn(state_last, reward, state)
-            actor.learn(state_last, action_last, td)
+                # learn
+            # td = critic.learn(state_last, reward, state)
+            # actor.learn(state_last, action_last, td)
 
         state_last = state
         action_last = action
@@ -680,7 +716,7 @@ def loop_record(control):
         print("apply movement ...")
 
         # todo, here for test, readin direction to guide or specific direction
-        direction = int(input())
+        # direction = int(input())
 
         # give speed , radius, omega, first turn, then forward
         if direction > 180:
@@ -694,7 +730,7 @@ def loop_record(control):
         control.radius = 0
         control.omega = rad / TURN_SECONDS
 
-        time.sleep(TURN_SECONDS)
+        # time.sleep(TURN_SECONDS)
 
         control.omega = 0
 
@@ -761,3 +797,47 @@ if __name__ == '__main__':
     # print("hehe")
     # p2.start()
     # p1.start()
+    #
+    # map = Map()
+    # map.walker_pos_x = - 1.5
+    # map.walker_pos_z = 0.9
+    # map.walker_face_to = 90
+
+    # print("====")
+    # map.print_walker_status()
+    # invalids_dire = map.detect_invalid_directions()
+    # print(invalids_dire)
+    #
+    # print("=====")
+    # map.update_walker_pos(0)
+    #
+    # map.print_walker_status()
+    # invalids_dire = map.detect_invalid_directions()
+    # print(invalids_dire)
+    #
+    # print("=====")
+    # map.update_walker_pos(0)
+    #
+    # map.print_walker_status()
+    # invalids_dire = map.detect_invalid_directions()
+    # print(invalids_dire)
+    #
+    # print("=====")
+    # map.update_walker_pos(270)
+    #
+    # map.print_walker_status()
+    # invalids_dire = map.detect_invalid_directions()
+    # print(invalids_dire)
+
+    #
+    # print("====")
+    #
+    # print(map.walker_pos_x)
+    # print(map.walker_pos_z)
+    # print(map.walker_face_to)
+    #
+    # invalids_dire = map.detect_invalid_directions()
+    # invalids_idx = [(i + 45) % 360 / 45 for i in invalids_dire]
+    #
+    # print(invalids_dire)
+    # print(invalids_idx)

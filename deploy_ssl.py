@@ -23,7 +23,7 @@ pwd = os.path.abspath(os.path.abspath(__file__))
 father_path = os.path.abspath(os.path.dirname(pwd) + os.path.sep + "..")
 sys.path.append(father_path)
 
-import DigitalDriver.ControlDriver as CD
+import DigitalDriver.ControlandOdometryDriver as CD
 
 """
     Record Parameters
@@ -38,8 +38,8 @@ RECORD_WIDTH = 2
 CHANNELS = 4
 RATE = 16000
 
-# todo, set minimum monitoring time
-RECORD_SECONDS = 3
+# fixme, set minimum monitoring time
+RECORD_SECONDS = 0.5
 FORMAT = pyaudio.paInt16
 
 FORWARD_SECONDS = 5
@@ -73,6 +73,10 @@ class Map:
         self.walker_length = 1.3
 
         # determine regions and gates
+        self.gate_region_1 = [3.2, 7.5]
+        self.gate_region_2 = [0, 0.9]
+        self.gate_region_3 = [3.2, 0.9]
+        self.gate_region_4 = [0.8, 0]
 
     # just show next position and its facing direction
     def next_walker_pos(self, direction):
@@ -120,41 +124,6 @@ class Map:
 
     # return the set of invalid directions (degrees)
     def detect_invalid_directions(self):
-        # if 4.2 < next_z <= 5.7:
-        #     if self.walker_length <= next_x:
-        #         return True
-        #     else:
-        #         return False
-        #
-        # elif 1.7 <= next_z <= 4.2:
-        #     if self.walker_length <= next_x <= 3.3 - self.walker_length:
-        #         return True
-        #     else:
-        #         return False
-        #
-        # elif 0 <= next_z < 1.7 and 0 <= next_x <= 3.3:
-        #     return True
-        #
-        # elif 0 <= next_z < 1.7 and next_x < 0:
-        #     if self.walker_length <= next_z <= 1.7 - self.walker_length:
-        #         return True
-        #     else:
-        #         return False
-        #
-        # elif 0 <= next_z < 1.7 and 3.3 < next_x:
-        #     if self.walker_length <= next_z <= 1.7 - self.walker_length:
-        #         return True
-        #     else:
-        #         return False
-        #
-        # elif next_z < 0:
-        #     if next_x <= 1.7 - self.walker_length or next_x >= 1.7 + self.walker_length:
-        #         return True
-        #     else:
-        #         return False
-        #
-        # else:
-        #     print("Out of condition in direction validation ... ")
         x = self.walker_pos_x
         z = self.walker_pos_z
 
@@ -191,6 +160,10 @@ class Map:
             if x < 0 or x > 3.2:
                 for dire in potential_dirs:
                     if (dire + self.walker_face_to) % 360 in [0, 45, 135, 180, 225, 315]:
+                        invalids.append(dire)
+            if 1.7 < x <= 3.2:
+                for dire in potential_dirs:
+                    if (dire + self.walker_face_to) % 360 in [135, 180, 225]:
                         invalids.append(dire)
 
         elif z < 0:
@@ -236,6 +209,27 @@ class Map:
             print("Fail to detect walker region .")
 
         return current_region
+
+    def cal_distance_region(self, region_num):
+        if region_num == 1:
+            return np.abs(self.gate_region_1[0] - self.walker_pos_x) + np.abs(self.gate_region_1[1] - self.walker_pos_z)
+
+        elif region_num == 2:
+            return np.abs(self.gate_region_2[0] - self.walker_pos_x) + np.abs(self.gate_region_2[1] - self.walker_pos_z)
+
+        elif region_num == 3:
+            return np.abs(self.gate_region_3[0] - self.walker_pos_x) + np.abs(self.gate_region_3[1] - self.walker_pos_z)
+
+        elif region_num == 4:
+            return np.abs(self.gate_region_4[0] - self.walker_pos_x) + np.abs(self.gate_region_4[1] - self.walker_pos_z)
+
+        else:
+            print("no such distance to region %d" % region_num)
+
+    def print_walker_status(self):
+        print("walker at x: ", self.walker_pos_x)
+        print("walker at z: ", self.walker_pos_z)
+        print("walker face to: ", self.walker_face_to)
 
 
 """
@@ -384,7 +378,7 @@ class Actor:
             log_prob = tf.log(self.acts_prob[0, self.a] + 0.0000001)  # self.acts_prob[0, self.a]
             self.exp_v = tf.reduce_mean(log_prob * self.td_error)
 
-        # fixme, when load all variables in, we need reset optimizer
+        # when load all variables in, we need reset optimizer
         with tf.variable_scope('adam_optimizer'):
             optimizer = tf.train.AdamOptimizer(self.lr)
             self.train_op = optimizer.minimize(-self.exp_v)
@@ -396,16 +390,15 @@ class Actor:
         self.saver = tf.train.Saver()
 
     def load_trained_model(self, model_path):
-        # fixme, when load models, variables are transmit: layers, adam (not placeholder and op)
+        # when load models, variables are transmit: layers, adam (not placeholder and op)
         self.saver.restore(self.sess, model_path)
         # load l1, acts_prob and adam vars
-        # fixme, after load, init adam
         self.sess.run(self.reset_optimizer)
 
     # invalid indicates action index
     def output_action(self, s, invalid_actions):
         acts = self.sess.run(self.acts_prob, feed_dict={self.s: s})
-        # fixme, mask invalid actions based on invalid actions
+        # mask invalid actions based on invalid actions
         p = acts.ravel()
         p = np.array(p)
 
@@ -417,6 +410,7 @@ class Actor:
         if p.sum() == 0:
             print("determine invalid action")
             act = np.random.choice(np.arange(acts.shape[1]))
+            exit(1)
         else:
             p /= p.sum()
             # act = np.random.choice(np.arange(acts.shape[1]), p=p)
@@ -425,7 +419,7 @@ class Actor:
         return act, p
 
     def learn(self, s, a, td):
-        # fixme, may modify s
+        # may modify s
         # s = s[np.newaxis, :]
         feed_dict = {self.s: s, self.a: a, self.td_error: td}
         _, exp_v = self.sess.run([self.train_op, self.exp_v], feed_dict=feed_dict)
@@ -470,8 +464,8 @@ class Critic:
 
         self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
-        # fixme, global will init actor vars, partly init
-        # fixme, need init: layer, optimizer (placeholder and op init is unnecessary)
+        # global will init actor vars, partly init
+        # need init: layer, optimizer (placeholder and op init is unnecessary)
         # self.sess.run(tf.global_variables_initializer())
         uninitialized_vars = [var for var in tf.global_variables() if 'critic' in var.name or 'Critic' in var.name]
 
@@ -479,7 +473,7 @@ class Critic:
         self.sess.run(initialize_op)
 
     def learn(self, s, r, s_):
-        # fixme, need modify s, s_
+        # need modify s, s_
         # s, s_ = s[np.newaxis, :], s_[np.newaxis, :]
         v_ = self.sess.run(self.v, feed_dict={self.s: s_})
         td_error, _ = self.sess.run([self.td_error, self.train_op],
@@ -575,34 +569,48 @@ def SSLturning(cd, angle):
     elif expectedTHETA <= -math.pi:
         expectedTHETA += 2 * math.pi
 
+    # print('rad: ', rad, ';  Current theta: ', currentTHETA, '; Expected theta: ', expectedTHETA)
+
     if rad != 0:
         if rad > 0:
-            cd.omega = math.pi / 8
+            cd.omega = math.pi / 6
         else:
-            cd.omega = -math.pi / 8
+            cd.omega = - math.pi / 6
         cd.radius = 0
         cd.speed = 0
-        time.sleep(0.5)
+        time.sleep(0.1)
+        # print('start moving...')
+
+        while 1:
+            if (cd.position[2] * expectedTHETA) > 0:
+                break
 
         if (cd.position[2] * expectedTHETA) >= 0 and rad > 0:
             while 1:
-                if cd.position[2] - expectedTHETA >= 0:
-                    time.sleep(1)
+                if abs(cd.position[2] - expectedTHETA) <= 0.2:
+                    cd.omega = 0
+                    time.sleep(0.1)
+                    # print('reached')
                     break
         elif (cd.position[2] * expectedTHETA) >= 0 and rad < 0:
             while 1:
-                if expectedTHETA - cd.position[2] >= 0:
-                    time.sleep(0.5)
+                if abs(expectedTHETA - cd.position[2]) <= 0.2:
+                    cd.omega = 0
+                    time.sleep(0.1)
+                    # print('reached')
                     break
         else:
+            print('false')
             pass
-        # stop moving
-        cd.omega = 0
     else:
         pass
 
+    cd.omega = 0
+    time.sleep(0.1)
+    # print('final position: ', cd.position[2])
 
-def loop_record(control):
+
+def loop_record(control, source='0'):
     device_index = -1
 
     p = pyaudio.PyAudio()
@@ -633,6 +641,11 @@ def loop_record(control):
     gccGenerator = GccGenerator()
     map = Map()
 
+    # fixme, set start position
+    map.walker_pos_x = -2.1
+    map.walker_pos_z = 0.9
+    map.walker_face_to = 90
+
     actor = Actor(GCC_BIAS, ACTION_SPACE, lr=0.004)
     critic = Critic(GCC_BIAS, ACTION_SPACE, lr=0.003, gamma=0.95)
 
@@ -645,6 +658,7 @@ def loop_record(control):
 
     # steps
     while True:
+        print(map.print_walker_status())
         """
             Record
         """
@@ -700,35 +714,51 @@ def loop_record(control):
         gcc = gccGenerator.cal_gcc_online(WAV_PATH, saved_count, type='Bias', debug=True)
         state = np.array(gcc)[np.newaxis, :]
 
-        print(gcc)
+        print("GCC Bias :", gcc)
 
         # todo, define invalids, based on constructed map % restrict regions
         invalids_dire = map.detect_invalid_directions()
 
+        print("invalids_dire of walker: ", invalids_dire)
+
         # transform walker direction to mic direction
         invalids_idx = [(i + 45) % 360 / 45 for i in invalids_dire]
 
+        print("invalids_idx of mic: ", invalids_idx)
+
         action, _ = actor.output_action(state, invalids_idx)
+
+        print("prob of mic: ", _)
 
         # transform mic direction to walker direction
         direction = (action + 6) % 7 * 45
 
         # bias is 45 degree, ok
-        print("Estimated direction is :" + str(direction))
+        print("Estimated direction of walker :" + str(direction))
 
         # todo, set different rewards and learn
         if saved_count > 0:
-            max_angle = max(float(direction), float(direction_last))
-            min_angle = min(float(direction), float(direction_last))
+            reward = None
+            if source == '0':
+                max_angle = max(float(direction), float(direction_last))
+                min_angle = min(float(direction), float(direction_last))
 
-            diff = min(abs(max_angle - min_angle), 360 - max_angle + min_angle)
+                diff = min(abs(max_angle - min_angle), 360 - max_angle + min_angle)
 
-            reward = 1 - diff / 180
-            print("last step's reward is :" + str(reward))
+                reward = 1 - diff / 180
+                print("single room 's reward is :" + str(reward))
+            elif source == '1':
+                reward = 1 - map.cal_distance_region(1) / 6
+                print("src 1 's reward is :", reward)
+            elif source == '4':
+                reward = 1 - map.cal_distance_region(4) / 4
+                print("src 4 's reward is :", reward)
 
             # learn
             # td = critic.learn(state_last, reward, state)
             # actor.learn(state_last, action_last, td)
+
+        direction = int(input())
 
         state_last = state
         action_last = action
@@ -738,28 +768,10 @@ def loop_record(control):
 
         SSLturning(control, direction)
 
-        # give speed , radius, omega, first turn, then forward
-        # if direction > 180:
-        #     # turn left
-        #     rad = math.radians(360 - direction)
-        # else:
-        #     # turn right
-        #     rad = - math.radians(direction)
-        #
-        # control.speed = 0
-        # control.radius = 0
-        # control.omega = rad / TURN_SECONDS
-        #
-        # time.sleep(TURN_SECONDS)
-        #
-        # control.omega = 0
-
         control.speed = - STEP_SIZE / FORWARD_SECONDS
         control.radius = 0
         control.omega = 0
-
         time.sleep(FORWARD_SECONDS)
-
         control.speed = 0
         print("movement done.")
 
@@ -767,7 +779,6 @@ def loop_record(control):
         print(map.detect_invalid_directions())
         print(map.detect_which_region())
 
-        # begin next step
         saved_count += 1
 
 
