@@ -38,7 +38,6 @@ RECORD_WIDTH = 2
 CHANNELS = 4
 RATE = 16000
 
-# fixme, set minimum monitoring time
 RECORD_SECONDS = 1
 FORMAT = pyaudio.paInt16
 
@@ -47,6 +46,7 @@ STEP_SIZE = 1
 
 MODEL_PATH = "../resource/model/save20.ckpt"
 WAV_PATH = "../resource/wav/"
+ONLINE_MODEL_PATH = "../resource/model/online.ckpt"
 
 """
     Digital Driver Part
@@ -663,6 +663,7 @@ def loop_record(control, source='1'):
     actor = Actor(GCC_BIAS, ACTION_SPACE, lr=0.004)
     critic = Critic(GCC_BIAS, ACTION_SPACE, lr=0.003, gamma=0.95)
 
+    # fixme, use oneline model if needed
     actor.load_trained_model(MODEL_PATH)
 
     # init at the first step
@@ -728,6 +729,7 @@ def loop_record(control, source='1'):
 
         print("producing action ...")
 
+        # fixme, change debug model if mic change
         gcc = gccGenerator.cal_gcc_online(WAV_PATH, saved_count, type='Bias', debug=False)
         state = np.array(gcc)[np.newaxis, :]
 
@@ -755,7 +757,7 @@ def loop_record(control, source='1'):
 
         # fixme, for test or hard code, cover direction
         # direction = int(input())
-        if source == '0' and saved_count < len(map.hall_same)-1:
+        if source == '0' and saved_count < len(map.hall_same) - 1:
             direction = map.hall_same[saved_count]
 
         print("Applied direction of walker :", direction)
@@ -805,6 +807,14 @@ def loop_record(control, source='1'):
 
         map.update_walker_pos(direction)
         saved_count += 1
+
+        # fixme, save online model if reach the source, re-chose actor model path if needed
+        if source == "0":
+            if 3 <= map.walker_pos_x <= 3.2 and 6.5 <= map.walker_pos_z <= 7.5:
+                actor.saver.save(actor.sess, ONLINE_MODEL_PATH)
+        elif source == "1":
+            if 3.5 <= map.walker_pos_x and map.walker_pos_z >= 6:
+                actor.saver.save(actor.sess, ONLINE_MODEL_PATH)
 
 
 if __name__ == '__main__':
