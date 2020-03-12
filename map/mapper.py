@@ -139,4 +139,4 @@ if __name__ == '__main__':
     #
     # build_tree(root)
 
-    # todo, not occupied node set as leaf,
+    # todo, set not occupied node set as leaf,
