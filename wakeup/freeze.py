@@ -41,22 +41,21 @@ FLAGS = None
 def create_inference_graph(wanted_words, sample_rate, clip_duration_ms,
                            clip_stride_ms, window_size_ms, window_stride_ms,
                            dct_coefficient_count, model_architecture, model_size_info):
-  """Creates an audio model with the nodes needed for inference.
+    """Creates an audio model with the nodes needed for inference.
 
-  Uses the supplied arguments to create a model, and inserts the input and
-  output nodes that are needed to use the graph for inference.
+    Uses the supplied arguments to create a model, and inserts the input and
+    output nodes that are needed to use the graph for inference.
 
-  Args:
-    wanted_words: Comma-separated list of the words we're trying to recognize.
-    sample_rate: How many samples per second are in the input audio files.
-    clip_duration_ms: How many samples to analyze for the audio pattern.
-    clip_stride_ms: How often to run recognition. Useful for models with cache.
-    window_size_ms: Time slice duration to estimate frequencies from.
-    window_stride_ms: How far apart time slices should be.
-    dct_coefficient_count: Number of frequency bands to analyze.
-    model_architecture: Name of the kind of model to generate.
-  """
-
+    Args:
+        wanted_words: Comma-separated list of the words we're trying to recognize.
+        sample_rate: How many samples per second are in the input audio files.
+        clip_duration_ms: How many samples to analyze for the audio pattern.
+        clip_stride_ms: How often to run recognition. Useful for models with cache.
+        window_size_ms: Time slice duration to estimate frequencies from.
+        window_stride_ms: How far apart time slices should be.
+        dct_coefficient_count: Number of frequency bands to analyze.
+        model_architecture: Name of the kind of model to generate.
+    """
     words_list = input_data.prepare_words_list(wanted_words.split(','))
     model_settings = models.prepare_model_settings(
         len(words_list), sample_rate, clip_duration_ms, window_size_ms,

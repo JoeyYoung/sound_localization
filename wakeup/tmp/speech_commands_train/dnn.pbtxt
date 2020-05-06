@@ -3316,7 +3316,7 @@ node {
             size: 2
           }
         }
-        tensor_content: "\200\000\000\000\003\000\000\000"
+        tensor_content: "\200\000\000\000\014\000\000\000"
       }
     }
   }
@@ -3345,7 +3345,7 @@ node {
         dtype: DT_FLOAT
         tensor_shape {
         }
-        float_val: -0.21401290595531464
+        float_val: -0.20701967179775238
       }
     }
   }
@@ -3374,7 +3374,7 @@ node {
         dtype: DT_FLOAT
         tensor_shape {
         }
-        float_val: 0.21401290595531464
+        float_val: 0.20701967179775238
       }
     }
   }
@@ -3507,7 +3507,7 @@ node {
           size: 128
         }
         dim {
-          size: 3
+          size: 12
         }
       }
     }
@@ -3586,7 +3586,7 @@ node {
         dtype: DT_FLOAT
         tensor_shape {
           dim {
-            size: 3
+            size: 12
           }
         }
         float_val: 0.0
@@ -3614,7 +3614,7 @@ node {
     value {
       shape {
         dim {
-          size: 3
+          size: 12
         }
       }
     }
@@ -3730,7 +3730,7 @@ node {
           size: -1
         }
         dim {
-          size: 3
+          size: 12
         }
       }
     }
@@ -5219,7 +5219,7 @@ node {
             size: 1
           }
         }
-        int_val: 3
+        int_val: 12
       }
     }
   }
@@ -9586,7 +9586,39 @@ node {
   }
 }
 node {
-  name: "final_fc/Adam/Initializer/zeros"
+  name: "final_fc/Adam/Initializer/zeros/shape_as_tensor"
+  op: "Const"
+  attr {
+    key: "_class"
+    value {
+      list {
+        s: "loc:@final_fc"
+      }
+    }
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: DT_INT32
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        tensor_shape {
+          dim {
+            size: 2
+          }
+        }
+        tensor_content: "\200\000\000\000\014\000\000\000"
+      }
+    }
+  }
+}
+node {
+  name: "final_fc/Adam/Initializer/zeros/Const"
   op: "Const"
   attr {
     key: "_class"
@@ -9608,15 +9640,35 @@ node {
       tensor {
         dtype: DT_FLOAT
         tensor_shape {
-          dim {
-            size: 128
-          }
-          dim {
-            size: 3
-          }
         }
         float_val: 0.0
       }
+    }
+  }
+}
+node {
+  name: "final_fc/Adam/Initializer/zeros"
+  op: "Fill"
+  input: "final_fc/Adam/Initializer/zeros/shape_as_tensor"
+  input: "final_fc/Adam/Initializer/zeros/Const"
+  attr {
+    key: "T"
+    value {
+      type: DT_FLOAT
+    }
+  }
+  attr {
+    key: "_class"
+    value {
+      list {
+        s: "loc:@final_fc"
+      }
+    }
+  }
+  attr {
+    key: "index_type"
+    value {
+      type: DT_INT32
     }
   }
 }
@@ -9651,7 +9703,7 @@ node {
           size: 128
         }
         dim {
-          size: 3
+          size: 12
         }
       }
     }
@@ -9715,7 +9767,39 @@ node {
   }
 }
 node {
-  name: "final_fc/Adam_1/Initializer/zeros"
+  name: "final_fc/Adam_1/Initializer/zeros/shape_as_tensor"
+  op: "Const"
+  attr {
+    key: "_class"
+    value {
+      list {
+        s: "loc:@final_fc"
+      }
+    }
+  }
+  attr {
+    key: "dtype"
+    value {
+      type: DT_INT32
+    }
+  }
+  attr {
+    key: "value"
+    value {
+      tensor {
+        dtype: DT_INT32
+        tensor_shape {
+          dim {
+            size: 2
+          }
+        }
+        tensor_content: "\200\000\000\000\014\000\000\000"
+      }
+    }
+  }
+}
+node {
+  name: "final_fc/Adam_1/Initializer/zeros/Const"
   op: "Const"
   attr {
     key: "_class"
@@ -9737,15 +9821,35 @@ node {
       tensor {
         dtype: DT_FLOAT
         tensor_shape {
-          dim {
-            size: 128
-          }
-          dim {
-            size: 3
-          }
         }
         float_val: 0.0
       }
+    }
+  }
+}
+node {
+  name: "final_fc/Adam_1/Initializer/zeros"
+  op: "Fill"
+  input: "final_fc/Adam_1/Initializer/zeros/shape_as_tensor"
+  input: "final_fc/Adam_1/Initializer/zeros/Const"
+  attr {
+    key: "T"
+    value {
+      type: DT_FLOAT
+    }
+  }
+  attr {
+    key: "_class"
+    value {
+      list {
+        s: "loc:@final_fc"
+      }
+    }
+  }
+  attr {
+    key: "index_type"
+    value {
+      type: DT_INT32
     }
   }
 }
@@ -9780,7 +9884,7 @@ node {
           size: 128
         }
         dim {
-          size: 3
+          size: 12
         }
       }
     }
@@ -9867,7 +9971,7 @@ node {
         dtype: DT_FLOAT
         tensor_shape {
           dim {
-            size: 3
+            size: 12
           }
         }
         float_val: 0.0
@@ -9903,7 +10007,7 @@ node {
     value {
       shape {
         dim {
-          size: 3
+          size: 12
         }
       }
     }
@@ -9990,7 +10094,7 @@ node {
         dtype: DT_FLOAT
         tensor_shape {
           dim {
-            size: 3
+            size: 12
           }
         }
         float_val: 0.0
@@ -10026,7 +10130,7 @@ node {
     value {
       shape {
         dim {
-          size: 3
+          size: 12
         }
       }
     }
@@ -11613,7 +11717,7 @@ node {
         dtype: DT_INT32
         tensor_shape {
         }
-        int_val: 3
+        int_val: 12
       }
     }
   }
@@ -12548,7 +12652,7 @@ node {
             size: 2
           }
         }
-        tensor_content: "\003\000\000\000\003\000\000\000"
+        tensor_content: "\014\000\000\000\014\000\000\000"
       }
     }
   }
@@ -14381,7 +14485,7 @@ node {
             size: 2
           }
         }
-        tensor_content: "\200\000\000\000\003\000\000\000"
+        tensor_content: "\200\000\000\000\014\000\000\000"
       }
     }
   }
@@ -14405,7 +14509,7 @@ node {
             size: 1
           }
         }
-        int_val: 3
+        int_val: 12
       }
     }
   }

@@ -1,3 +1,12 @@
 _silence_
 _unknown_
-happy
+yes
+no
+up
+down
+left
+right
+on
+off
+stop
+go

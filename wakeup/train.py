@@ -255,8 +255,7 @@ def main(_):
             # Save the model checkpoint when validation accuracy improves
             if total_accuracy > best_accuracy:
                 best_accuracy = total_accuracy
-                checkpoint_path = os.path.join(FLAGS.train_dir, 'best',
-                                            FLAGS.model_architecture + '_'+ str(int(best_accuracy*10000)) + '.ckpt')
+                checkpoint_path = os.path.join(FLAGS.train_dir, FLAGS.model_architecture + '_'+ str(int(best_accuracy*10000)) + '.ckpt')
                 tf.logging.info('Saving best model to "%s-%d"', checkpoint_path, training_step)
                 saver.save(sess, checkpoint_path, global_step=training_step)
             tf.logging.info('So far the best validation accuracy is %.2f%%' % (best_accuracy*100))
