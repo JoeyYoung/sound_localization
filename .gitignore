@@ -3,3 +3,5 @@ wav/
 __pycache__/
 _pycache_/
 ./online_wav
+./wakeup/speech_dataset/
+./wakeup/records
