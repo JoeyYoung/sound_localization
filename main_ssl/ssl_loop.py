@@ -8,6 +8,7 @@ from ssl_actor_critic import Actor, Critic
 from ssl_map import Map
 from ssl_audio_processor import *
 from ssl_turning import SSLturning
+
 import time
 import sys
 import os
@@ -82,6 +83,8 @@ class SSL:
             """
                 Record
             """
+
+            # TODO, congest the wakeup module
 
             # active detection
             print("start monitoring ... ")

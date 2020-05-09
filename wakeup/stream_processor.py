@@ -165,7 +165,7 @@ def process_from_buffer():
 
         store_frames_to_file(frames, window_count)
 
-        # TODO, detect this file
+        # detect this file
         time.sleep(0.5)
 
         window_count += 1
