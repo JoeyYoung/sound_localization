@@ -1,3 +1,8 @@
+"""
+    This is a packet of KWS detection,
+        dependent on DNN training part
+"""
+
 import pyaudio
 import ctypes as ct
 import numpy as np
@@ -11,7 +16,7 @@ import librosa.display
 import threading
 import time
 from numpy.linalg import norm
-
+from kws_do_inference import KwsNNet
 
 class KwsDetector:
     def __init__(self, chunk, record_device_name, record_width, channels, rate, format, wav_path):
@@ -28,10 +33,15 @@ class KwsDetector:
         self.RANDOM_PREFIX = time.strftime('%m-%d_%H:%M',time.localtime(now/1000))
 
         """
+            init NN model, and load graph
+        """
+        # self.KwsNet = KwsNNet(os.path.join(self.WAV_PATH, self.RANDOM_PREFIX + "win.wav"), "Pretrained_models/DNN/DNN_M.pb", "Pretrained_models/labels.txt")
+
+        """
             Window settings
         """
         # can be large enough
-        self.RECORD_SECONDS = 50
+        self.RECORD_SECONDS = 200
 
         # need to contain the word
         self.WINDOW_SECONDS = 1
@@ -85,8 +95,8 @@ class KwsDetector:
         return device_index
 
     def store_frames_to_file(self, frames, name_id):
-        # TODO, set to only one temp wav file
-        wave_output_filename = self.RANDOM_PREFIX + "win_%d.wav" % (name_id)
+        # TODO, set to only one temp wav file in real
+        wave_output_filename = self.RANDOM_PREFIX + "win.wav" # % (name_id)
         wf = wave.open(os.path.join(self.WAV_PATH, wave_output_filename), 'wb')
         wf.setnchannels(self.CHANNELS)
         wf.setsampwidth(self.RECORD_WIDTH)
@@ -123,6 +133,7 @@ class KwsDetector:
         p.terminate()
 
     def process_from_buffer(self):
+        KwsNet = KwsNNet(os.path.join(self.WAV_PATH, self.RANDOM_PREFIX + "win.wav"), "Pretrained_models/DNN/DNN_M.pb", "Pretrained_models/labels.txt")
         # init setting
         window_count = 0
         start_frame = 0
@@ -146,7 +157,8 @@ class KwsDetector:
 
             self.store_frames_to_file(frames, window_count)
 
-            # TODO, detect this file
+            # TODO, call DNN part to do inference for this file
+            KwsNet.do_inference()
             time.sleep(0.5)
 
             window_count += 1
@@ -158,7 +170,7 @@ class KwsDetector:
         p2 = threading.Thread(target=self.process_from_buffer, args=())
 
         p1.start()
-        time.sleep(2)
+        time.sleep(1)
         time.sleep(self.WINDOW_SECONDS)
 
         p2.start()
@@ -167,5 +179,6 @@ class KwsDetector:
         p2.join() 
 
 
-kws = KwsDetector(1, 2, 3, 4, 5, 6, 7)
-kws.slide_win_loop()
+if __name__ == "__main__":
+    kws = KwsDetector(1, 2, 3, 4, 5, 6, 7)
+    kws.slide_win_loop()
