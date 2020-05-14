@@ -41,7 +41,7 @@ class KwsDetector:
             Window settings
         """
         # can be large enough
-        self.RECORD_SECONDS = 200
+        self.RECORD_SECONDS = 500
 
         # need to contain the word
         self.WINDOW_SECONDS = 1
@@ -53,10 +53,10 @@ class KwsDetector:
         self.frame_num_win = int(self.RATE / self.CHUNK * self.WINDOW_SECONDS)
 
         # number of frames for one stride
-        self.frame_num_stride = 5
+        self.frame_num_stride = 1 # 5
 
-        # after read how many windows flush the buffer
-        self.win_num_flush = 10
+        # after read how many windows flush the buffer, large enough since no delay
+        self.win_num_flush = 100 # 10
 
         # frames buffer from stream, need flush after sometime
         self.frames_buffer = []
@@ -95,7 +95,7 @@ class KwsDetector:
         return device_index
 
     def store_frames_to_file(self, frames, name_id):
-        # TODO, set to only one temp wav file in real
+        # set to only one temp wav file in real
         wave_output_filename = self.RANDOM_PREFIX + "win.wav" # % (name_id)
         wf = wave.open(os.path.join(self.WAV_PATH, wave_output_filename), 'wb')
         wf.setnchannels(self.CHANNELS)
@@ -120,6 +120,7 @@ class KwsDetector:
             #     print("read in a window size")
 
             # flush the buffer
+            # after a large time duration to avoid high memory useage
             if i % (self.frame_num_win * self.win_num_flush) == 0 and i != 0:
                 print("=====  p1:  set the flush")
                 self.flush_event.set()
@@ -152,14 +153,17 @@ class KwsDetector:
 
             self.buffer_lock.acquire()
             for i in range(0, self.frame_num_win):
+                # detect index out of ranage, wait for p1 to fill the buffer
+                while (start_frame + i) >= len(self.frames_buffer):
+                    continue
                 frames.append(self.frames_buffer[start_frame + i])
             self.buffer_lock.release()
 
             self.store_frames_to_file(frames, window_count)
 
-            # TODO, call DNN part to do inference for this file
+            # call DNN part to do inference for this file
             KwsNet.do_inference()
-            time.sleep(0.5)
+            # time.sleep(0.05)
 
             window_count += 1
             start_frame += self.frame_num_stride

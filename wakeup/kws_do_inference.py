@@ -50,7 +50,7 @@ class KwsNNet:
         return [line.rstrip() for line in tf.gfile.GFile(filename)]
 
     def do_inference(self):
-        print("call NN model to do inference ...")
+        # print("call NN model to do inference ...")
         
         if not self.wav or not tf.gfile.Exists(self.wav):
             tf.logging.fatal('Audio file does not exist %s', self.wav)
@@ -69,10 +69,16 @@ class KwsNNet:
 
             # Sort to show labels in order of confidence
             top_k = predictions.argsort()[-self.how_many_labels:][::-1]
+
+            rank = 0
             for node_id in top_k:
                 human_string = self.labels_list[node_id]
                 score = predictions[node_id]
-                print('%s (score = %.5f)' % (human_string, score))
+                # print('%s (score = %.5f)' % (human_string, score))
+                if rank == 0 and score > 0.8 and human_string == "stop":
+                    print("wakeup")
+                # TODO, set print to only reponde to wake up word
+                rank += 1
 
             return 0
 
