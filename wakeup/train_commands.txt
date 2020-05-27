@@ -35,3 +35,12 @@ python train.py --model_architecture ds_cnn --model_size_info 6 276 10 4 2 1 276
 
 # Do inference use a model
 python label_wav.py --wav records/go.wav --graph Pretrained_models/DS_CNN/DS_CNN_M.pb --labels Pretrained_models/labels.txt 
+
+# modified default words in trian.py
+python train.py --model_architecture ds_cnn --model_size_info 5 172 10 4 2 1 172 3 3 2 2 172 3 3 1 1 172 3 3 1 1 172 3 3 1 1
+
+# freeze, modified default words
+python freeze.py --model_architecture ds_cnn --model_size_info 5 172 10 4 2 1 172 3 3 2 2 172 3 3 1 1 172 3 3 1 1 172 3 3 1 1 --output_file ds_cnn.pb
+
+在训练时需要指明模型结构，以及words，还有保存ckpt路径，（可以在default里改或命令中改）；
+freeze时将ckpt保存为pb，但同时需要指明模型结构以及words（可以在default里改或命令中改）。

@@ -389,7 +389,7 @@ if __name__ == '__main__':
   parser.add_argument(
       '--batch_size',
       type=int,
-      default=100,
+      default=128,
       help='How many items to train with at once',)
   parser.add_argument(
       '--summaries_dir',
@@ -399,7 +399,7 @@ if __name__ == '__main__':
   parser.add_argument(
       '--wanted_words',
       type=str,
-      default='yes,no,up,down,left,right,on,off,stop,go',
+      default='yes,left,right,stop,go,forward,marvin,follow',
       help='Words to use (others will be added to an unknown label)',)
   parser.add_argument(
       '--train_dir',
@@ -409,7 +409,7 @@ if __name__ == '__main__':
   parser.add_argument(
       '--save_step_interval',
       type=int,
-      default=100,
+      default=50,
       help='Save model checkpoint every save_steps.')
   parser.add_argument(
       '--start_checkpoint',

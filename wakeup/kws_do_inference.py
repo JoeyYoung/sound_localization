@@ -83,7 +83,7 @@ class KwsNNet:
             return 0
 
 if __name__ == "__main__":
-    kwsnn = KwsNNet("records/go.wav", "Pretrained_models/DNN/DNN_M.pb", "Pretrained_models/labels.txt")
+    kwsnn = KwsNNet("records/go.wav", "Pretrained_models/DS_CNN/DS_CNN_M.pb", "Pretrained_models/labels.txt")
     kwsnn.do_inference()
 
     # "records/go.wav"
