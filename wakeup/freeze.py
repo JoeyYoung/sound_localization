@@ -148,7 +148,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--checkpoint',
         type=str,
-        default='tmp/speech_commands_train',
+        default='tmp/speech_commands_train/dnn_8100.ckpt-1200',
         help='If specified, restore this pretrained model before any training.')
     parser.add_argument(
         '--model_architecture',

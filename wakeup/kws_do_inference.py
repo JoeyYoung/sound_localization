@@ -75,15 +75,16 @@ class KwsNNet:
                 human_string = self.labels_list[node_id]
                 score = predictions[node_id]
                 # print('%s (score = %.5f)' % (human_string, score))
-                if rank == 0 and score > 0.8 and human_string == "stop":
+                if rank == 0 and score > 0.4 and human_string == "follow":
                     print("wakeup")
+                    return 1
                 # TODO, set print to only reponde to wake up word
                 rank += 1
 
             return 0
 
 if __name__ == "__main__":
-    kwsnn = KwsNNet("records/go.wav", "Pretrained_models/DS_CNN/DS_CNN_M.pb", "Pretrained_models/labels.txt")
+    kwsnn = KwsNNet("records/go.wav", "Pretrained_models/DNN/DNN_M.pb", "Pretrained_models/labels.txt")
     kwsnn.do_inference()
 
     # "records/go.wav"

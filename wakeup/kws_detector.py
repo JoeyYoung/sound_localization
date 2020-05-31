@@ -53,7 +53,7 @@ class KwsDetector:
         self.frame_num_win = int(self.RATE / self.CHUNK * self.WINDOW_SECONDS)
 
         # number of frames for one stride
-        self.frame_num_stride = 1 # 5
+        self.frame_num_stride = 3 # 5
 
         # after read how many windows flush the buffer, large enough since no delay
         self.win_num_flush = 100 # 10
@@ -66,6 +66,8 @@ class KwsDetector:
 
         # trigger for flush, init start frame
         self.flush_event = threading.Event()
+
+        self.end_event = threading.Event()
 
     def setup_device_index(self):
         device_index = -1
@@ -113,6 +115,9 @@ class KwsDetector:
                         input_device_index=self.device_index)
 
         for i in range(0, self.frame_num_total):
+            # if self.end_event.is_set() is True:
+            #     break
+
             frame = stream.read(self.CHUNK)
             self.frames_buffer.append(frame)
 
@@ -134,10 +139,14 @@ class KwsDetector:
         p.terminate()
 
     def process_from_buffer(self):
-        KwsNet = KwsNNet(os.path.join(self.WAV_PATH, self.RANDOM_PREFIX + "win.wav"), "Pretrained_models/DNN/DNN_M.pb", "Pretrained_models/labels.txt")
+        # KwsNet = KwsNNet(os.path.join(self.WAV_PATH, self.RANDOM_PREFIX + "win.wav"), "Pretrained_models/DNN/DNN_M.pb", "Pretrained_models/labels.txt")
+        KwsNet = KwsNNet(os.path.join(self.WAV_PATH, self.RANDOM_PREFIX + "win.wav"), "follow.pb", "tmp/speech_commands_train/follow_labels.txt")
         # init setting
         window_count = 0
         start_frame = 0
+
+        continous_wakeups = 0
+
         while True:
             frames = []
 
@@ -162,7 +171,19 @@ class KwsDetector:
             self.store_frames_to_file(frames, window_count)
 
             # call DNN part to do inference for this file
-            KwsNet.do_inference()
+            this_frame_status = KwsNet.do_inference()
+            if this_frame_status == 1:
+                continous_wakeups += 1
+                print(continous_wakeups)
+            elif this_frame_status == 0:
+                continous_wakeups -= 0.3
+                if continous_wakeups < 0:
+                    continous_wakeups = 0
+            # print(continous_wakeups)
+            if continous_wakeups >= 3:
+                print(" ====== wake up")
+                # self.end_event.set()
+                # break
             # time.sleep(0.05)
 
             window_count += 1
