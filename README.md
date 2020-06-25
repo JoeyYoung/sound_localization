@@ -23,4 +23,6 @@ Voice signals are monitored by deployed microphone array in a low-power state. T
 
 *game_multi.py*: simulated environment to perform online tuning
 
+*markov_loc.py*: combine RL with markov localization
+
 *train.py*: pre-training code
