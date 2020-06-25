@@ -1,7 +1,7 @@
 # Sound Source Localization
 Voice signals are monitored by deployed microphone array in a low-power state. Time-delay features of each microphone pair are extracted to estimate the direction of the sound source, which can be combined with the mobility of autonomous robot. Before usage, we first train a NN model using supervised learning, on dataset collected from GSound simulator (Schissler and Manocha, 2011). Trained NN model is then fine-tuned through online RL, in daily usage.
 
-- Dirs:
+### Dirs:
 
 *baseline*: traditional TDOA methos based on Geometric Features
 
@@ -19,7 +19,7 @@ Voice signals are monitored by deployed microphone array in a low-power state. T
 
 *wav*: raw audio data
 
-- Files:
+### Files:
 
 *game_multi.py*: simulated environment to perform online tuning
 
