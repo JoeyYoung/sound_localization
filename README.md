@@ -21,6 +21,6 @@ Voice signals are monitored by deployed microphone array in a low-power state. T
 
 - Files:
 
-*game_multi*: simulated environment to perform online tuning
+*game_multi.py*: simulated environment to perform online tuning
 
-*train*: pre-training code
+*train.py*: pre-training code
